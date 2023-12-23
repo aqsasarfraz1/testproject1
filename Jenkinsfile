@@ -4,6 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'aqsaali/dockerterminal1:latest'
         PREVIOUS_DOCKER_IMAGE = 'aqsaali/dockerterminal1:previous'
+        EMAIL_RECIPIENTS = 'fa20-bse-034@cuiatk.edu.pk'
     }
 
     stages {
@@ -53,6 +54,10 @@ pipeline {
                     docker.image(PREVIOUS_DOCKER_IMAGE).run()
                 }
             }
+             emailext subject: 'Failed Deployment: Rollback Performed',
+                      body: 'The deployment has failed. A rollback to the previous version has been performed.',
+                      to: EMAIL_RECIPIENTS,
+                      attachLog: true
         }
 
 
