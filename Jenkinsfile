@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = 'aqsaali/dockerterminal1:latest'
+        PREVIOUS_DOCKER_IMAGE = 'aqsaali/dockerterminal1:previous'
     }
 
     stages {
@@ -40,11 +41,20 @@ pipeline {
         }
     }
 
-    post {
+     post {
         failure {
-            // Rollback to previous version or perform other actions on failure
+            // Rollback to the previous version on failure
             echo 'Deployment failed. Rolling back to the previous version.'
+            // Implement rollback logic here
+            script {
+                // Pull the previous version from Docker Hub and run it
+                docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+                    docker.image(PREVIOUS_DOCKER_IMAGE).pull()
+                    docker.image(PREVIOUS_DOCKER_IMAGE).run()
+                }
+            }
         }
+
 
         success {
             // Notify the team or perform other actions on success
