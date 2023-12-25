@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'aqsaali/dockerterminal1:latest'
-        PREVIOUS_DOCKER_IMAGE = 'aqsaali/dockerterminal1:previous'
+        DOCKER_IMAGE = 'aqsaali/helloworld:latest'
+        PREVIOUS_DOCKER_IMAGE = 'aqsaali/helloworld:previous'
         EMAIL_RECIPIENTS = 'fa20-bse-034@cuiatk.edu.pk'
     }
 
