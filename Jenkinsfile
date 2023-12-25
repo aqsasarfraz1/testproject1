@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_REGISTRY = "aqsaali"
+        DOCKER_REGISTRY = "aqsaali/helloworld:latest"
         IMAGE_NAME = "aqsaali/helloworld:latest"
         CONTAINER_NAME = "jovial_zhukovsky"
         PREVIOUS_VERSION = sh(script: 'docker ps -q --filter ancestor=${DOCKER_REGISTRY}/${IMAGE_NAME}', returnStatus: true).trim()
