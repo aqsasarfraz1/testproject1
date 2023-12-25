@@ -2,68 +2,67 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'aqsaali/helloworld:latest'
-        PREVIOUS_DOCKER_IMAGE = 'aqsaali/helloworld:previous'
-        EMAIL_RECIPIENTS = 'fa20-bse-034@cuiatk.edu.pk'
+        DOCKER_REGISTRY = "aqsaali"
+        IMAGE_NAME = "aqsaali/helloworld:latest"
+        CONTAINER_NAME = "jovial_zhukovsky"
+        PREVIOUS_VERSION = sh(script: 'docker ps -q --filter ancestor=${DOCKER_REGISTRY}/${IMAGE_NAME}', returnStatus: true).trim()
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                // Check out the source code from your version control system
-                checkout scm
-            }
-        }
-
         stage('Build') {
             steps {
-                // Build the Docker image
                 script {
-                    docker.build(DOCKER_IMAGE)
+                    sh 'docker build -t ${DOCKER_REGISTRY}/${IMAGE_NAME}:${BUILD_NUMBER} .'
                 }
             }
         }
 
         stage('Test') {
             steps {
-                // Add test steps here
+                script {
+                    sh 'docker run --rm ${DOCKER_REGISTRY}/${IMAGE_NAME}:${BUILD_NUMBER} your-test-command'
+                }
             }
         }
 
         stage('Deploy') {
             steps {
-                // Log in to Docker Hub and push the Docker image
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
-                        docker.image(DOCKER_IMAGE).push()
-                    }
+                    sh 'docker stop ${CONTAINER_NAME} || true'
+                    sh 'docker rm ${CONTAINER_NAME} || true'
+                    sh 'docker run -d -p 8080:80 --name ${CONTAINER_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}:${BUILD_NUMBER}'
                 }
             }
         }
     }
 
-     post {
+    post {
         failure {
-            // Rollback to the previous version on failure
-            echo 'Deployment failed. Rolling back to the previous version.'
-            // Implement rollback logic here
-            script {
-                // Pull the previous version from Docker Hub and run it
-                docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
-                    docker.image(PREVIOUS_DOCKER_IMAGE).pull()
-                    docker.image(PREVIOUS_DOCKER_IMAGE).run()
+            stage('Rollback') {
+                steps {
+                    script {
+                        if (env.PREVIOUS_VERSION) {
+                            echo "Rolling back to the previous version: ${env.PREVIOUS_VERSION}"
+                            sh "docker stop ${CONTAINER_NAME} || true"
+                            sh "docker rm ${CONTAINER_NAME} || true"
+                            sh "docker run -d -p 8080:80 --name ${CONTAINER_NAME} ${DOCKER_REGISTRY}/${IMAGE_NAME}:${env.PREVIOUS_VERSION}"
+                        } else {
+                            echo "No previous version found for rollback."
+                        }
+                    }
                 }
             }
-             emailext subject: 'Failed Deployment: Rollback Performed',
-                      body: 'The deployment has failed. A rollback to the previous version has been performed.',
-                      to: EMAIL_RECIPIENTS,
-                      attachLog: true
-        }
 
-
-        success {
-            // Notify the team or perform other actions on success
-            echo 'Deployment successful. Notify the team.'
+            stage('Email Notification') {
+                steps {
+                    script {
+                        emailext body: 'The build failed. Please check the Jenkins build logs.',
+                                 subject: "Build Failure: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                                 to: 'fa20-bse-034@cuiatk.edu.pk',
+                                 mimeType: 'text/html'
+                    }
+                }
+            }
         }
     }
 }
